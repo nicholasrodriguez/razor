@@ -1,0 +1,56 @@
+---
+# defaults file for ansible-role-razor
+
+# Core Razor packages
+razor_packages:
+  - razor-server
+  - ruby
+
+# Razor microkernel location
+# Sometime the original Puppetlabs microkernel
+# source can take 10 minutes to respond
+razor_microkernel_source: "http://pup.pt/razor-microkernel-latest"
+
+# Razor tftp folder location
+tftp_root_directory:  "/var/lib/tftpboot"
+
+# Razor postgres configuration
+razor_db_name: "razor"
+razor_db_user_name: "razor"
+razor_db_user_pw: "razor"
+razor_service_user: "razor"
+razor_service_user_pw: "razor"
+
+# Razor Shiro configuration
+razor_api_admin: "razor"
+razor_api_admin_pw: "razor"
+razor_api_roles:
+  - role_name: "admin"
+    role_scope: "*"
+  - role_name: "user"
+    role_scope: "query:*"
+razor_api_users:
+  - api_user_name: "razor_api_user"
+    api_user_pw: "razor"
+    api_user_roles: "user"
+
+# iPXE Sources and files
+ipxe_legacy_source: "http://boot.ipxe.org/"
+ipxe_legacy_file: "undionly.kpxe"
+ipxe_uefi_source: "http://boot.ipxe.org/"
+ipxe_uefi_file: "ipxe.efi"
+
+# Razor GEMs
+razor_client_gems:
+  - name: "colored"
+    version: "1.2"
+  - name: "command_line_reporter"
+    version: "4.0.0"
+  - name: "mime-types"
+    version: "1.25.1"
+  - name: "multi_json"
+    version: "1.13.1"
+  - name: "razor-client"
+    version: "1.1.0"
+  - name: "rest-client"
+    version: "1.6.9"

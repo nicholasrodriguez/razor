@@ -1,0 +1,224 @@
+---
+# Sourced from here
+# https://github.com/puppetlabs/razor-server/wiki/Installation
+
+# Install Razor and its dependancies
+#
+
+- name: Add Puppet Labs GPG key.
+  rpm_key:
+    key: https://yum.puppet.com/RPM-GPG-KEY-puppet
+    state: present
+  tags:
+    - razor_install
+    - razor_repo
+
+- name: Add Puppet Labs repositories.
+  package:
+    name: http://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+    state: present
+  tags:
+    - razor_install
+    - razor_repo
+
+- name: Install libarchive-devel
+  yum:
+    name: libarchive-devel
+    enablerepo: powertools
+    state: present
+  tags:
+    - razor_install
+    - razor_packages
+
+- name: Install Razor Server and Ruby
+  yum:
+   name: "{{ razor_packages }}"
+   state: present
+  tags:
+    - razor_install
+    - razor_packages
+
+- name: Configure Razor Service User
+  user:
+    name : "{{ razor_service_user }}"
+    state: present
+    groups: wheel
+    append: yes
+    password: "{{ razor_service_user_pw | password_hash('sha512', 'A512') }}"
+    update_password: on_create
+  tags:
+    - razor_install
+    - razor_user
+
+- name: Opening Firewall port 8150/tcp
+  firewalld:
+    zone: public
+    port: 8150/tcp
+    permanent: true
+    state: enabled
+    immediate: true
+  tags:
+    - razor_install
+    - razor_fw
+
+# Configure Razor API password hardending
+# https://github.com/puppetlabs/razor-server/wiki/Securing-the-server
+# http://shiro.apache.org/configuration.html#Configuration-%5Cusers%5C
+#
+
+- name: Copy Shiro file to Razor Server
+  copy:
+    src: files/shiro.ini
+    dest: /etc/puppetlabs/razor-server/shiro.ini
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  tags:
+    - shiro_config
+
+- name: Configure Apache Shiro Roles
+  blockinfile:
+    path: /etc/puppetlabs/razor-server/shiro.ini
+    insertafter: "# ansible_managed_API_roles"
+    block: |
+      {{ item.role_name }} = {{ item.role_scope }}
+    marker: "# {mark} Ansible managed Roles {{ item.role_name }}"
+  loop: "{{ razor_api_roles }}"
+  tags:
+    - shiro_config
+
+- name: Configure Apache Shiro API Users
+  include_tasks: add_shiro_api_users.yaml
+  loop: "{{ razor_api_users }}"
+  tags:
+    - shiro_config
+
+- name: Configure Apache Shiro API admin
+  include_tasks: add_shiro_api_admin.yaml
+  tags:
+    - shiro_config
+
+# Final Razor configuration
+#
+
+- name: Update Razor config file
+  template:
+    src: templates/config.yaml.j2
+    dest: /etc/puppetlabs/razor-server/config.yaml
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  notify: Razor Service Start
+  tags:
+    - razor_config
+
+- name: Check the Razor database state
+  become_user: razor
+  shell: /opt/puppetlabs/server/bin/razor-admin -e production check-migrations
+  register: db_check
+  ignore_errors: true
+  no_log: true
+  tags:
+    - razor_config
+
+- name: Create or update the Razor database schema if required
+  become_user: razor
+  shell: /opt/puppetlabs/server/bin/razor-admin -e production migrate-database
+  when: db_check.rc != 0
+  tags:
+    - razor_config
+
+- name: Start the Razor Service
+  systemd:
+    name: razor-server
+    state: started
+    enabled: true
+  tags:
+    - razor_config
+
+# Get the external microkernel and iPXE images
+#
+
+- name: Get the Razor Microkernel
+  get_url:
+    url: "{{ razor_microkernel_source }}"
+    dest: /root/
+    validate_certs: no
+  register: mk_download
+  retries: 3
+  until: mk_download is not failed
+  tags:
+    - microkernel
+
+- name: Get Microkernel file name
+  set_fact:
+    mk_payload: "{{ mk_download.dest[6:] }}"
+  tags:
+    - microkernel
+
+- name: Unarchive the Microkernel
+  unarchive:
+    src: "/root/{{ mk_payload }}"
+    dest: /opt/puppetlabs/server/data/razor-server/repo
+    remote_src: true
+  tags:
+    - microkernel
+
+- name: Download and configure the iPXE bootstrap script
+  get_url:
+    url: "http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:8150/api/microkernel/bootstrap?nic_max=1"
+    dest: "{{ tftp_root_directory }}/bootstrap.ipxe"
+    mode: 0755
+    username: "{{ razor_api_admin }}"
+    password: "{{ razor_api_admin_pw }}"
+  register: result
+  retries: 3
+  until: result is not failed
+  tags:
+    - setup_bootstrap
+
+- name: Set permissions on bootstrap.ipxe
+  file:
+    path: "{{ tftp_root_directory }}/bootstrap.ipxe"
+    mode: 0755
+    seuser: system_u
+  tags:
+    - setup_bootstrap
+
+- name: Get iPXE bootloader
+  get_url:
+    url: "{{ ipxe_legacy_source }}{{ ipxe_legacy_file }}"
+    dest: "{{ tftp_root_directory }}/"
+    mode: 0755
+  register: result
+  retries: 3
+  until: result is not failed
+  tags:
+    - get_ipxe
+
+- name: Get UEFI iPXE bootloader
+  get_url:
+    url: "{{ ipxe_uefi_source }}{{ ipxe_uefi_file }}"
+    dest: "{{ tftp_root_directory }}/"
+    mode: 0755
+  register: result
+  retries: 3
+  until: result is not failed
+  tags:
+    - get_uefi_ipxe
+
+# Install the Razor client and dependancies
+#
+
+- name: Install the Razor client and required Ruby GEMs
+  gem:
+    name: "{{ item.name }}"
+    version: "{{ item.version }}"
+    force: yes
+    state: present
+    user_install: no
+  loop: "{{ razor_client_gems }}"
+  tags:
+    - razor_client

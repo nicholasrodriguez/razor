@@ -1,0 +1,18 @@
+---
+- name: Create Password hash for Razor API admin
+  shell: echo -n '{{ razor_api_admin_pw }}' | openssl dgst -sha256 -binary | xxd -p -c 256
+  register: razor_api_pw_hash
+  tags:
+    - shiro_config
+    - shiro_config_users
+
+- name: Configure Apache Shiro admin
+  blockinfile:
+    path: /etc/puppetlabs/razor-server/shiro.ini
+    insertafter: "# ansible_managed_API_users"
+    marker: "# {mark} Ansible managed API admin"
+    block: |
+      {{ razor_api_admin }} = {{ razor_api_pw_hash.stdout }}, admin
+  tags:
+    - shiro_config
+    - shiro_config_users
