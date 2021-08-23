@@ -222,3 +222,11 @@
   loop: "{{ razor_client_gems }}"
   tags:
     - razor_client
+
+# Setup Razor Broker
+#
+
+- name: Create Razor Broker
+  shell: /usr/local/bin/razor create-broker --name noop --broker-type noop
+  tags:
+    - create_broker
