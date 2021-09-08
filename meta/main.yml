@@ -6,13 +6,12 @@ galaxy_info:
   platforms:
    - name: EL
      versions:
-     - 8
-     - 7
+       - 8
+       - 7
   galaxy_tags:
      - puppet
      - puppetlabs
      - razor
-     - Razor
      - baremetal
      - provisioning
      - esxi
