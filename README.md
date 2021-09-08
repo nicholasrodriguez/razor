@@ -18,8 +18,9 @@ Instructions for installing Razor found here which this role is based off of inc
 
 This role will only install Razor and the default OS Tasks. I've created the following personal Roles for custom Tasks, Repos, Policies and Tags:
 
-* nicholasrodriguez.razor.tasks (IN DEV)
-* nicholasrodriguez.razor.policies (IN DEV)
+* nicholasrodriguez.razor_tasks_centos
+* nicholasrodriguez.razor_tasks_esxi
+* nicholasrodriguez.razor_manage_hosts
 
 These can be copied and used as template for your own environments.
 
