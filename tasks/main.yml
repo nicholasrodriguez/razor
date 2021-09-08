@@ -32,15 +32,15 @@
 
 - name: Install Razor Server and Ruby
   yum:
-   name: "{{ razor_packages }}"
-   state: present
+    name: "{{ razor_packages }}"
+    state: present
   tags:
     - razor_install
     - razor_packages
 
 - name: Configure Razor Service User
   user:
-    name : "{{ razor_service_user }}"
+    name: "{{ razor_service_user }}"
     state: present
     groups: wheel
     append: yes
