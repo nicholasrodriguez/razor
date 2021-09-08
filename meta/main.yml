@@ -1,6 +1,6 @@
 galaxy_info:
   author: Nicholas Rodriguez
-  description: Ansible role to install Puppetlabs Razor
+  description: Ansible role to install Puppet Razor
   license: MIT
   min_ansible_version: 2.9
   platforms:
@@ -14,6 +14,7 @@ galaxy_info:
      - razor
      - Razor
      - baremetal
-     - bare_metal
-     - os_provisioning
+     - provisioning
+     - esxi
+     - kickstart
 dependencies: []
