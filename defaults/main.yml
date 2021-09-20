@@ -5,6 +5,7 @@
 razor_packages:
   - razor-server
   - ruby
+  - tar
 
 # Razor microkernel location
 # Sometime the original Puppetlabs microkernel
